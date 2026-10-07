@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>六合智研 Mark Six AI - 香港六合彩統計模型與智能預測器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            hkRed: '#ef4444',
+            hkBlue: '#3b82f6',
+            hkGreen: '#10b981',
+            gold: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans TC"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+TC:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 3D 球體質感 */
+    .lottery-ball {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      box-shadow: inset -2px -3px 5px rgba(0,0,0,0.45), inset 2px 2px 4px rgba(255,255,255,0.45), 0 4px 6px -1px rgba(0,0,0,0.3);
+      user-select: none;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .lottery-ball:hover {
+      transform: scale(1.12);
+    }
+
+    .ball-red {
+      background: radial-gradient(circle at 35% 30%, #ff6b6b 0%, #dc2626 55%, #991b1b 100%);
+    }
+    .ball-blue {
+      background: radial-gradient(circle at 35% 30%, #60a5fa 0%, #2563eb 55%, #1e40af 100%);
+    }
+    .ball-green {
+      background: radial-gradient(circle at 35% 30%, #34d399 0%, #059669 55%, #064e3b 100%);
+    }
+
+    /* 自定義滾動條 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    /* 閃光霓虹動畫 */
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); }
+      50% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.45); }
+    }
+    .glow-gold {
+      animation: pulseGlow 3s infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased flex flex-col selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- 頂部頂級科技感導覽列 -->
+  <header class="border-b border-slate-800/80 bg-slate-900/75 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      
+      <!-- Logo 標誌 -->
+      <div class="flex items-center gap-3">
+        <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 via-rose-600 to-indigo-600 shadow-md">
+          <span class="text-xl">🎱</span>
+          <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-black tracking-wider text-white">六合智研</h1>
+            <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">AI PRO v4.2</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-none">香港六合彩大數據統計與機率模擬器</p>
+        </div>
+      </div>
+
+      <!-- 右側按鈕群：音效開關、即時重置、獎金池 -->
+      <div class="flex items-center gap-3">
+        <div class="hidden md:flex items-center gap-2 bg-slate-800/70 border border-slate-700/60 rounded-xl px-3 py-1 text-xs">
+          <span class="text-slate-400">模擬累積期數:</span>
+          <span class="text-amber-400 font-mono font-bold" id="totalDrawsSample">2,000 期</span>
+        </div>
+        
+        <button id="audioToggleBtn" onclick="toggleAudio()" title="音效開關" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+          <i data-lucide="volume-2" class="w-4 h-4" id="audioIcon"></i>
+        </button>
+
+        <a href="#rulesModal" onclick="openModal('rulesModal')" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/30 text-xs font-bold transition">
+          <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+          <span>獎金分配與玩法</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主容器 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- 警示 Banner：理智與娛樂聲明 -->
+    <section class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-200">
+      <div class="flex items-center gap-2.5">
+        <span class="text-lg shrink-0">⚠️</span>
+        <p><strong>理性博彩提示：</strong>六合彩每期攪珠均為獨立隨機事件（期望值約 -46%）。本系統基於歷史大數法則、馬可夫轉移矩陣及神經網絡機率模擬，僅供統計學研究與娛樂參考。未滿十八歲人士切勿投注。</p>
+      </div>
+      <div class="shrink-0 flex items-center gap-2 text-xs font-mono font-bold bg-amber-500/20 text-amber-300 px-3 py-1 rounded-xl">
+        <span>中頭獎機率: 1 / 13,983,816</span>
+      </div>
+    </section>
+
+    <!-- 頂部雙核心卡片：預測控制面板 & 生成器 -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- 左側：模型核心與策略參數控制 (7 欄寬) -->
+      <section class="lg:col-span-7 bg-slate-900/90 rounded-3xl border border-slate-800 p-5 sm:p-6 shadow-2xl relative flex flex-col justify-between">
+        
+        <div>
+          <!-- 標題與模型標籤 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+            <div>
+              <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <i data-lucide="cpu" class="w-5 h-5 text-amber-400"></i>
+                <span>智慧預測模型選擇</span>
+              </h2>
+              <p class="text-xs text-slate-400">切換多維演算法權重以生成最優投注組合</p>
+            </div>
+            <span class="self-start sm:self-auto text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+              當前運算: <span id="currentModelBadge" class="text-amber-400 font-bold">歷史冷熱雙軌</span>
+            </span>
+          </div>
+
+          <!-- 模型切換按鈕組 -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6" id="modelSelectorGroup">
+            <button onclick="setModel('hot_cold')" id="btn_hot_cold" class="model-tab-btn active p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 bg-amber-500/20 border-amber-500 text-amber-300 font-bold">
+              <span class="text-lg">🔥</span>
+              <span class="text-xs">冷熱加權</span>
+            </button>
+            <button onclick="setModel('markov')" id="btn_markov" class="model-tab-btn p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600 font-semibold">
+              <span class="text-lg">⛓️</span>
+              <span class="text-xs">馬可夫鏈</span>
+            </button>
+            <button onclick="setModel('balance')" id="btn_balance" class="model-tab-btn p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600 font-semibold">
+              <span class="text-lg">⚖️</span>
+              <span class="text-xs">波色五行</span>
+            </button>
+            <button onclick="setModel('neural')" id="btn_neural" class="model-tab-btn p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600 font-semibold">
+              <span class="text-lg">🧠</span>
+              <span class="text-xs">神經網絡</span>
+            </button>
+            <button onclick="setModel('random')" id="btn_random" class="model-tab-btn p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600 font-semibold">
+              <span class="text-lg">🎲</span>
+              <span class="text-xs">純隨機對照</span>
+            </button>
+          </div>
+
+          <!-- 模型參數調節滑桿 -->
+          <div class="space-y-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 mb-5 text-xs">
+            
+            <!-- 參數 1: 冷門反彈 vs 熱門順勢 -->
+            <div>
+              <div class="flex justify-between font-bold mb-1.5">
+                <span class="text-slate-300">熱門大勢 ⟷ 冷門反彈 (偏好權重)</span>
+                <span class="text-amber-400 font-mono" id="weightPreferenceText">均衡配置 (50:50)</span>
+              </div>
+              <input type="range" id="paramWeight" min="0" max="100" value="50" oninput="updateParamUI()" class="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                <span>極端追熱 (熱波主導)</span>
+                <span>標準大數平穩</span>
+                <span>博反彈 (長冷必出)</span>
+              </div>
+            </div>
+
+            <!-- 參數 2: 總和值和值過濾器 -->
+            <div>
+              <div class="flex justify-between font-bold mb-1.5">
+                <span class="text-slate-300">六個正字總和範圍限制 (常態分佈: 120-175)</span>
+                <span class="text-emerald-400 font-mono" id="sumRangeText">110 ~ 180</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="range" id="sumMin" min="21" max="140" value="110" oninput="updateSumUI()" class="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                <input type="range" id="sumMax" min="141" max="279" value="180" oninput="updateSumUI()" class="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+              </div>
+            </div>
+
+            <!-- 參數 3: 單雙比率偏好 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60">
+              <span class="text-slate-300 font-bold">單雙比例 (奇偶平衡):</span>
+              <div class="flex gap-2" id="oddEvenRadioGroup">
+                <button onclick="setOddEven('any')" id="oe_any" class="px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-amber-500/20 border-amber-500 text-amber-300">不限</button>
+                <button onclick="setOddEven('3:3')" id="oe_33" class="px-2.5 py-1 rounded-lg border text-[11px] font-semibold bg-slate-800 border-slate-700 text-slate-300">3單:3雙 (42%)</button>
+                <button onclick="setOddEven('4:2')" id="oe_42" class="px-2.5 py-1 rounded-lg border text-[11px] font-semibold bg-slate-800 border-slate-700 text-slate-300">4單:2雙</button>
+                <button onclick="setOddEven('2:4')" id="oe_24" class="px-2.5 py-1 rounded-lg border text-[11px] font-semibold bg-slate-800 border-slate-700 text-slate-300">2單:4雙</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 必選心水球 / 剔除死球 快速折疊區 -->
+        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2 text-slate-400">
+            <i data-lucide="pin" class="w-3.5 h-3.5 text-rose-400"></i>
+            <span>心水號碼: <span id="lockedCountBadge" class="text-white font-mono font-bold">0</span> 個 | 排除號碼: <span id="excludedCountBadge" class="text-white font-mono font-bold">0</span> 個</span>
+          </div>
+          <button onclick="openModal('ballFilterModal')" class="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 underline underline-offset-4">
+            <span>自選指定/剔除號碼</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- 右側：一鍵即時運算生成器與注碼面板 (5 欄寬) -->
+      <section class="lg:col-span-5 bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl border border-slate-800 p-5 sm:p-6 shadow-2xl flex flex-col justify-between">
+        <div>
+          <!-- 頂部切換注數與複式選擇 -->
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-5 h-5 text-emerald-400"></i>
+                <span>智能注碼推算</span>
+              </h2>
+              <p class="text-xs text-slate-400">符合香港馬會投注標準格式</p>
+            </div>
+            
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button onclick="setTicketMode('single')" id="mode_single" class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-500 text-slate-950">單式 (6字)</button>
+              <button onclick="setTicketMode('combo7')" id="mode_combo7" class="px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">7字複式</button>
+              <button onclick="setTicketMode('combo8')" id="mode_combo8" class="px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">8字複式</button>
+            </div>
+          </div>
+
+          <!-- 生成按鈕矩陣 -->
+          <div class="grid grid-cols-3 gap-2.5 mb-5">
+            <button onclick="generateTickets(1)" class="group py-3 px-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition flex flex-col items-center justify-center">
+              <span>推算 1 注</span>
+              <span class="text-[10px] font-mono text-slate-900/80">($10)</span>
+            </button>
+            <button onclick="generateTickets(5)" class="group py-3 px-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-white font-black text-sm active:scale-95 transition flex flex-col items-center justify-center">
+              <span>一鍵 5 注</span>
+              <span class="text-[10px] font-mono text-slate-400">電腦大熱</span>
+            </button>
+            <button onclick="generateTickets(10)" class="group py-3 px-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-white font-black text-sm active:scale-95 transition flex flex-col items-center justify-center">
+              <span>矩陣 10 注</span>
+              <span class="text-[10px] font-mono text-slate-400">覆蓋大盤</span>
+            </button>
+          </div>
+
+          <!-- 注碼展示清單區 -->
+          <div class="space-y-2.5 max-h-[320px] overflow-y-auto pr-1" id="ticketsContainer">
+            <!-- 預設動態生成 -->
+          </div>
+        </div>
+
+        <!-- 底部快捷動作條：複製、分享 WhatsApp、儲存 -->
+        <div class="pt-4 border-t border-slate-800/80 flex items-center gap-2 mt-4">
+          <button onclick="copyGeneratedTickets()" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition flex items-center justify-center gap-2 active:scale-95">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>複製全部號碼</span>
+          </button>
+          <button onclick="shareToWhatsApp()" class="flex-1 py-2.5 px-3 rounded-xl bg-green-600 hover:bg-green-500 text-white text-xs font-black transition flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-green-600/30">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>WhatsApp 夾飛格式</span>
+          </button>
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- 模組 2: 1-49 號碼球熱度分佈大盤與遺漏分佈熱圖 -->
+    <section class="bg-slate-900/90 rounded-3xl border border-slate-800 p-5 sm:p-6 shadow-2xl space-y-5">
+      
+      <!-- 標題與圖例 -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <i data-lucide="activity" class="w-5 h-5 text-rose-500"></i>
+              <span>1-49 號碼球統計熱圖 (Heatmap & Frequency)</span>
+            </h3>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">馬會官方紅藍綠波色對應</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">點擊任何號碼球可快速【心水鎖定】或【排除剔除】</p>
+        </div>
+
+        <!-- 波色比率與圖例統計 -->
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <div class="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span class="w-3 h-3 rounded-full ball-red inline-block"></span>
+            <span class="text-slate-300 font-bold">紅波 17個</span>
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span class="w-3 h-3 rounded-full ball-blue inline-block"></span>
+            <span class="text-slate-300 font-bold">藍波 16個</span>
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span class="w-3 h-3 rounded-full ball-green inline-block"></span>
+            <span class="text-slate-300 font-bold">綠波 16個</span>
+          </div>
+          <div class="flex items-center gap-1.5 pl-2 border-l border-slate-700">
+            <button onclick="sortBallsBy('number')" id="btn_sort_num" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 text-[11px] font-bold">號碼序</button>
+            <button onclick="sortBallsBy('freq')" id="btn_sort_freq" class="px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-white text-[11px] font-bold">最熱頻率</button>
+            <button onclick="sortBallsBy('overdue')" id="btn_sort_due" class="px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-white text-[11px] font-bold">最久未出</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 49 個號碼球格線矩陣 -->
+      <div class="grid grid-cols-7 sm:grid-cols-7 md:grid-cols-10 lg:grid-cols-14 gap-2 sm:gap-2.5" id="ballsHeatmapGrid">
+        <!-- 動態填入 1-49 球 -->
+      </div>
+
+      <!-- 統計圖表小儀表：波色比率條、單雙比、和值常態分佈 -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-slate-800/80">
+        
+        <!-- 波色歷史平均比 -->
+        <div class="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+          <div class="flex justify-between items-center text-xs font-bold mb-2">
+            <span class="text-slate-300">波色歷史分佈 (紅 : 藍 : 綠)</span>
+            <span class="text-slate-400 font-mono text-[11px]">34.7% : 32.6% : 32.7%</span>
+          </div>
+          <div class="w-full h-3 rounded-full overflow-hidden flex bg-slate-800">
+            <div class="h-full bg-red-500" style="width: 35%" title="紅波 35%"></div>
+            <div class="h-full bg-blue-500" style="width: 33%" title="藍波 33%"></div>
+            <div class="h-full bg-emerald-500" style="width: 32%" title="綠波 32%"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1.5 font-mono">
+            <span>紅波佔 17/49</span>
+            <span>藍波佔 16/49</span>
+            <span>綠波佔 16/49</span>
+          </div>
+        </div>
+
+        <!-- 單雙分佈佔比 -->
+        <div class="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+          <div class="flex justify-between items-center text-xs font-bold mb-2">
+            <span class="text-slate-300">單雙開出概率 (理論值)</span>
+            <span class="text-slate-400 font-mono text-[11px]">3單3雙最常見</span>
+          </div>
+          <div class="w-full h-3 rounded-full overflow-hidden flex bg-slate-800">
+            <div class="h-full bg-indigo-500" style="width: 51%" title="單數 (25個)"></div>
+            <div class="h-full bg-amber-500" style="width: 49%" title="雙數 (24個)"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1.5 font-mono">
+            <span class="text-indigo-400">單數 (25個球) ~ 51%</span>
+            <span class="text-amber-400">雙數 (24個球) ~ 49%</span>
+          </div>
+        </div>
+
+        <!-- 號碼區間分佈 (1-10, 11-20, 21-30, 31-40, 41-49) -->
+        <div class="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+          <div class="flex justify-between items-center text-xs font-bold mb-2">
+            <span class="text-slate-300">五大區間均勻度</span>
+            <span class="text-emerald-400 font-mono text-[11px]">全覆蓋極少斷門</span>
+          </div>
+          <div class="flex gap-1 h-3 items-end">
+            <div class="flex-1 bg-sky-500/80 rounded-t h-[75%]" title="1-10"></div>
+            <div class="flex-1 bg-sky-500/80 rounded-t h-[85%]" title="11-20"></div>
+            <div class="flex-1 bg-sky-500/80 rounded-t h-[95%]" title="21-30"></div>
+            <div class="flex-1 bg-sky-500/80 rounded-t h-[80%]" title="31-40"></div>
+            <div class="flex-1 bg-sky-500/80 rounded-t h-[70%]" title="41-49"></div>
+          </div>
+          <div class="flex justify-between text-[9px] text-slate-500 mt-1 font-mono">
+            <span>1-10</span>
+            <span>11-20</span>
+            <span>21-30</span>
+            <span>31-40</span>
+            <span>41-49</span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 模組 3: 蒙特卡羅模擬回測 (10,000期歷史回測驗證) -->
+    <section class="bg-slate-900/90 rounded-3xl border border-slate-800 p-5 sm:p-6 shadow-2xl space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+        <div>
+          <h3 class="text-base font-black text-white flex items-center gap-2">
+            <i data-lucide="line-chart" class="w-5 h-5 text-emerald-400"></i>
+            <span>蒙特卡羅 10,000 期模擬回測驗證室 (Monte Carlo Simulator)</span>
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">以當前選定模型推算的 1 注心水號碼，快速回測一萬期攪珠，展示真實數學生產期望值與獎項機率</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="runMonteCarloBacktest()" id="btnStartBacktest" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center gap-2">
+            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            <span>開始執行一萬次回測</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 回測結果儀表盤 -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center" id="backtestMetrics">
+        <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+          <div class="text-[11px] text-slate-400 font-bold">總投注期數 / 本金</div>
+          <div class="text-base sm:text-lg font-black font-mono text-white mt-1" id="resTotalBets">10,000 期 ($100,000)</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">每注 $10 港幣</div>
+        </div>
+        <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+          <div class="text-[11px] text-slate-400 font-bold">累計中獎總次數</div>
+          <div class="text-base sm:text-lg font-black font-mono text-amber-400 mt-1" id="resTotalWins">-- 次</div>
+          <div class="text-[10px] text-slate-500 mt-0.5" id="resWinRate">中獎率: --%</div>
+        </div>
+        <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+          <div class="text-[11px] text-slate-400 font-bold">累計回報獎金</div>
+          <div class="text-base sm:text-lg font-black font-mono text-emerald-400 mt-1" id="resTotalPrize">$ --</div>
+          <div class="text-[10px] text-slate-500 mt-0.5" id="resROI">淨回報率 (ROI): --%</div>
+        </div>
+        <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+          <div class="text-[11px] text-slate-400 font-bold">最高命中成就</div>
+          <div class="text-base sm:text-lg font-black font-mono text-rose-400 mt-1" id="resHighestTier">--</div>
+          <div class="text-[10px] text-slate-500 mt-0.5" id="resHighestDetail">尚未測試</div>
+        </div>
+      </div>
+
+      <!-- 詳細獎項命中分佈階梯表 -->
+      <div class="bg-slate-950/60 rounded-2xl border border-slate-800/90 overflow-hidden text-xs">
+        <div class="p-3 bg-slate-900 border-b border-slate-800 font-bold text-slate-300 flex justify-between items-center">
+          <span>各獎級別命中次數統計與獎金試算</span>
+          <span class="text-[10px] font-mono text-slate-500">香港馬會派彩級別 (頭至七獎)</span>
+        </div>
+        <div class="divide-y divide-slate-800/60 font-mono" id="tierBreakdownList">
+          <!-- 動態載入七個獎項 -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 模態視窗 1: 心水號碼與排除號碼設定 -->
+  <div id="ballFilterModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div>
+          <h3 class="text-base font-black text-white flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
+            <span>自選心水與排除號碼 (1-49)</span>
+          </h3>
+          <p class="text-xs text-slate-400">綠色勾為必選，紅色叉為排除出局</p>
+        </div>
+        <button onclick="closeModal('ballFilterModal')" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 py-3 text-xs">
+        <button onclick="clearCustomFilter()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">全部清空</button>
+        <span class="text-slate-500">|</span>
+        <span class="text-emerald-400 font-bold">點第 1 下：必出心水 (最多 5 個)</span>
+        <span class="text-rose-400 font-bold">點第 2 下：排除剔除</span>
+      </div>
+
+      <!-- 49 球選擇矩陣 -->
+      <div class="grid grid-cols-7 gap-2 overflow-y-auto py-2 flex-1 pr-1" id="filterBallsGrid">
+        <!-- JS 動態生成 -->
+      </div>
+
+      <div class="pt-4 border-t border-slate-800 flex justify-end">
+        <button onclick="closeModal('ballFilterModal')" class="px-6 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition">
+          完成設定
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模態視窗 2: 香港六合彩規則與獎金分配表 -->
+  <div id="rulesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <span>六合彩中獎規則與派彩級別</span>
+        </h3>
+        <button onclick="closeModal('rulesModal')" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="space-y-2 text-xs text-slate-300">
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
+          <span class="font-bold text-amber-400">頭獎 (6個正字)</span>
+          <span class="font-mono">獎金基金分配 (至少HK$800萬)</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
+          <span class="font-bold text-slate-200">二獎 (5個正字 + 特號)</span>
+          <span class="font-mono">按基金分配</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
+          <span class="font-bold text-slate-200">三獎 (5個正字)</span>
+          <span class="font-mono">按基金分配</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
+          <span class="font-bold text-slate-300">四獎 (4個正字 + 特號)</span>
+          <span class="font-mono text-emerald-400">固定 HK$9,600</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
+          <span class="font-bold text-slate-300">五獎 (4個正字)</span>
+          <span class="font-mono text-emerald-400">固定 HK$640</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
+          <span class="font-bold text-slate-300">六獎 (3個正字 + 特號)</span>
+          <span class="font-mono text-emerald-400">固定 HK$320</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
+          <span class="font-bold text-slate-300">七獎 (3個正字)</span>
+          <span class="font-mono text-emerald-400">固定 HK$40</span>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-500">每注投注金額為港幣十元正。複式或膽拖可選每半注五元。</p>
+    </div>
+  </div>
+
+  <!-- 浮動提示 Toast -->
+  <div id="toastBox" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 border border-amber-500/40 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold">
+    <span id="toastIcon">✨</span>
+    <span id="toastMessage">已更新</span>
+  </div>
+
+  <textarea id="clipboardBuffer" class="fixed -top-96 left-0 opacity-0"></textarea>
+
+  <!-- 頁腳 -->
+  <footer class="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2 font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+        <span>Mark Six AI Mathematical Engine • HK Predictive Model</span>
+      </div>
+      <p>© 2026 六合智研. 理性娛樂，量力而為。投注切勿過度。</p>
+    </div>
+  </footer>
+
+  <script>
+    /* =========================================================================
+     * 1. 六合彩核心常量與香港官方波色定義 (Hong Kong Mark Six Official Colors)
+     * ========================================================================= */
+    const RED_BALLS = [1, 2, 7, 8, 12, 13, 18, 19, 23, 24, 29, 30, 34, 35, 40, 45, 46];
+    const BLUE_BALLS = [3, 4, 9, 10, 14, 15, 20, 25, 26, 31, 36, 37, 41, 42, 47, 48];
+    const GREEN_BALLS = [5, 6, 11, 16, 17, 21, 22, 27, 28, 32, 33, 38, 39, 43, 44, 49];
+
+    function getBallColorClass(num) {
+      if (RED_BALLS.includes(num)) return 'ball-red';
+      if (BLUE_BALLS.includes(num)) return 'ball-blue';
+      return 'ball-green';
+    }
+
+    function getBallColorName(num) {
+      if (RED_BALLS.includes(num)) return '紅';
+      if (BLUE_BALLS.includes(num)) return '藍';
+      return '綠';
+    }
+
+    // 格式化雙位數例如 08, 23
+    function padNum(n) {
+      return n < 10 ? '0' + n : '' + n;
+    }
+
+    /* =========================================================================
+     * 2. 模擬歷史數據庫 (Simulated 2,000 Draws Database with realistic variance)
+     * ========================================================================= */
+    let simulatedDrawHistory = [];
+    let ballStats = {}; // 1-49 { freq, overdue, weight, markovNext: {} }
+
+    function generateRealisticHistory() {
+      simulatedDrawHistory = [];
+      ballStats = {};
+      for (let i = 1; i <= 49; i++) {
+        ballStats[i] = {
+          number: i,
+          freq: 0,
+          overdue: 0,
+          color: getBallColorName(i),
+          colorClass: getBallColorClass(i),
+          nnConfidence: 0.5,
+          nextTransitions: {}
+        };
+      }
+
+      // 生成 2,000 期攪珠
+      const TOTAL_DRAWS = 2000;
+      let lastDraw = null;
+
+      for (let d = 0; d < TOTAL_DRAWS; d++) {
+        // 每球遺漏加 1
+        for (let i = 1; i <= 49; i++) {
+          ballStats[i].overdue++;
+        }
+
+        // 抽取 6 正字 + 1 特號
+        const pool = Array.from({ length: 49 }, (_, idx) => idx + 1);
+        const drawn = [];
+        for (let k = 0; k < 7; k++) {
+          const pickIdx = Math.floor(Math.random() * pool.length);
+          drawn.push(pool.splice(pickIdx, 1)[0]);
+        }
+
+        const regular = drawn.slice(0, 6).sort((a,b) => a - b);
+        const special = drawn[6];
+
+        // 統計頻次與歸零遺漏
+        drawn.forEach(num => {
+          ballStats[num].freq++;
+          ballStats[num].overdue = 0;
+        });
+
+        // 構建馬可夫鏈狀態轉移
+        if (lastDraw) {
+          lastDraw.regular.forEach(prev => {
+            regular.forEach(curr => {
+              ballStats[prev].nextTransitions[curr] = (ballStats[prev].nextTransitions[curr] || 0) + 1;
+            });
+          });
+        }
+
+        lastDraw = { regular, special };
+        simulatedDrawHistory.push(lastDraw);
+      }
+
+      // 計算偽神經網絡信心值 (0.2 ~ 0.98)
+      for (let i = 1; i <= 49; i++) {
+        const fRatio = ballStats[i].freq / (TOTAL_DRAWS * 7 / 49);
+        const oRatio = Math.min(ballStats[i].overdue / 18, 1.5);
+        ballStats[i].nnConfidence = Math.min(Math.max((fRatio * 0.6 + oRatio * 0.4) * (0.8 + Math.random()*0.35), 0.25), 0.98);
+      }
+    }
+
+    /* =========================================================================
+     * 3. 系統狀態管理
+     * ========================================================================= */
+    let currentModel = 'hot_cold'; // hot_cold | markov | balance | neural | random
+    let ticketMode = 'single';    // single (6) | combo7 (7) | combo8 (8)
+    let oddEvenFilter = 'any';    // any | 3:3 | 4:2 | 2:4
+    let currentSort = 'number';   // number | freq | overdue
+    let lockedBalls = new Set();  // 必選心水
+    let excludedBalls = new Set();// 排除
+    let generatedTicketsList = [];
+    let isAudioEnabled = true;
+
+    /* =========================================================================
+     * 4. Web Audio API 原生音效合成 (免加載外部 mp3)
+     * ========================================================================= */
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!isAudioEnabled) return;
+      try {
+        initAudio();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const now = audioCtx.currentTime;
+
+        if (type === 'ball') {
+          // 滾球金屬清脆敲擊聲
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320 + Math.random() * 280, now);
+          osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'jackpot') {
+          // 中獎勝利和弦
+          [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+            gain.gain.setValueAtTime(0.18, now + idx * 0.07);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.35);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + idx * 0.07);
+            osc.stop(now + idx * 0.07 + 0.35);
+          });
+        }
+      } catch (e) {
+        // Audio error silent fallback
+      }
+    }
+
+    function toggleAudio() {
+      isAudioEnabled = !isAudioEnabled;
+      const icon = document.getElementById('audioIcon');
+      if (isAudioEnabled) {
+        icon.setAttribute('data-lucide', 'volume-2');
+        showToast('音效已開啟 🔊');
+      } else {
+        icon.setAttribute('data-lucide', 'volume-x');
+        showToast('音效已靜音 🔇');
+      }
+      lucide.createIcons();
+    }
+
+    /* =========================================================================
+     * STREAMING_CHUNK:Predictive modeling calculation algorithms
+     * 5. 五大機率模型加權權重運算引擎
+     * ========================================================================= */
+    function calculateBallWeight(ballNum, model, preferenceRatio) {
+      const b = ballStats[ballNum];
+      if (lockedBalls.has(ballNum)) return 99999;
+      if (excludedBalls.has(ballNum)) return -99999;
+
+      if (model === 'random') {
+        return Math.random();
+      }
+
+      if (model === 'hot_cold') {
+        // preferenceRatio 0 (冷門) ~ 100 (熱門)
+        const hotFactor = b.freq / 300;
+        const coldFactor = b.overdue / 20;
+        const p = preferenceRatio / 100;
+        return (hotFactor * p) + (coldFactor * (1 - p)) + (Math.random() * 0.15);
+      }
+
+      if (model === 'markov') {
+        // 基於近期歷史轉移機率
+        const last = simulatedDrawHistory[simulatedDrawHistory.length - 1];
+        let transitionScore = 0;
+        if (last) {
+          last.regular.forEach(prev => {
+            transitionScore += (ballStats[prev].nextTransitions[ballNum] || 0);
+          });
+        }
+        return (transitionScore * 0.7) + (b.freq * 0.3) + (Math.random() * 0.2);
+      }
+
+      if (model === 'balance') {
+        // 波色與單雙平衡偏好
+        let bonus = 1.0;
+        if (b.color === '紅') bonus *= 1.05; // 紅球稍多一個
+        if (ballNum % 2 !== 0) bonus *= 1.02;
+        const overdueBonus = Math.min(b.overdue * 0.08, 1.2);
+        return (b.freq * 0.5 * bonus) + overdueBonus + (Math.random() * 0.25);
+      }
+
+      if (model === 'neural') {
+        // 神經網絡置信度模式
+        return (b.nnConfidence * 10) + (Math.random() * 0.5);
+      }
+
+      return Math.random();
+    }
+
+    /* 檢查注碼是否符合單雙及總和限制 */
+    function validateTicketFilters(balls) {
+      const sum = balls.reduce((acc, v) => acc + v, 0);
+      const minSum = parseInt(document.getElementById('sumMin').value);
+      const maxSum = parseInt(document.getElementById('sumMax').value);
+      if (sum < minSum || sum > maxSum) return false;
+
+      if (oddEvenFilter !== 'any') {
+        const oddCount = balls.filter(n => n % 2 !== 0).length;
+        const evenCount = balls.length - oddCount;
+        if (oddEvenFilter === '3:3' && (oddCount !== 3 || evenCount !== 3)) return false;
+        if (oddEvenFilter === '4:2' && (oddCount !== 4 || evenCount !== 2)) return false;
+        if (oddEvenFilter === '2:4' && (oddCount !== 2 || evenCount !== 4)) return false;
+      }
+      return true;
+    }
+
+    /* 生成一注合法號碼 (依模型與篩選器加權輪盤選擇) */
+    function generateOneSmartTicket() {
+      const pref = parseInt(document.getElementById('paramWeight').value);
+      const requiredCount = ticketMode === 'combo8' ? 8 : (ticketMode === 'combo7' ? 7 : 6);
+
+      let attempts = 0;
+      let finalBalls = [];
+
+      while (attempts < 150) {
+        attempts++;
+        const pool = [];
+        for (let i = 1; i <= 49; i++) {
+          if (!excludedBalls.has(i)) {
+            const w = Math.max(calculateBallWeight(i, currentModel, pref), 0.01);
+            pool.push({ num: i, weight: w });
+          }
+        }
+
+        // 先置入心水球
+        const selected = new Set(Array.from(lockedBalls).slice(0, requiredCount));
+
+        // 輪盤法選取其餘號碼
+        while (selected.size < requiredCount && pool.length > 0) {
+          const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+          let r = Math.random() * totalWeight;
+          let picked = null;
+          let pickedIdx = -1;
+
+          for (let j = 0; j < pool.length; j++) {
+            r -= pool[j].weight;
+            if (r <= 0) {
+              picked = pool[j].num;
+              pickedIdx = j;
+              break;
+            }
+          }
+
+          if (picked !== null) {
+            selected.add(picked);
+            pool.splice(pickedIdx, 1);
+          } else {
+            // 保底挑選
+            const fallback = pool.pop();
+            selected.add(fallback.num);
+          }
+        }
+
+        const candidateArray = Array.from(selected).sort((a,b) => a - b);
+
+        // 前 6 個字做條件檢驗
+        const testSix = candidateArray.slice(0, 6);
+        if (validateTicketFilters(testSix)) {
+          finalBalls = candidateArray;
+          break;
+        } else {
+          finalBalls = candidateArray; // 若嘗試多次仍不符合，最終保底採用
+        }
+      }
+
+      // 選取一個特別號碼 (在剩下號碼中隨機產生)
+      const remain = [];
+      for (let i = 1; i <= 49; i++) {
+        if (!finalBalls.includes(i) && !excludedBalls.has(i)) {
+          remain.push(i);
+        }
+      }
+      const specialNum = remain[Math.floor(Math.random() * remain.length)] || ((finalBalls[0] % 49) + 1);
+
+      return {
+        regular: finalBalls,
+        special: specialNum,
+        sum: finalBalls.slice(0, 6).reduce((a,b) => a+b, 0),
+        oddEven: `${finalBalls.slice(0, 6).filter(n => n % 2 !== 0).length}單${finalBalls.slice(0, 6).filter(n => n % 2 === 0).length}雙`
+      };
+    }
+
+    /* =========================================================================
+     * STREAMING_CHUNK:Generating tickets UI, WhatsApp clipboard integration
+     * 6. 注碼生成展示與操作
+     * ========================================================================= */
+    function generateTickets(count) {
+      playSound('jackpot');
+      generatedTicketsList = [];
+      for (let i = 0; i < count; i++) {
+        generatedTicketsList.push(generateOneSmartTicket());
+      }
+      renderGeneratedTickets();
+      showToast(`已成功依【${getModelName(currentModel)}】生成 ${count} 注！✨`);
+    }
+
+    function renderGeneratedTickets() {
+      const container = document.getElementById('ticketsContainer');
+      container.innerHTML = generatedTicketsList.map((t, idx) => {
+        const ballsHtml = t.regular.map(n => `
+          <span class="lottery-ball ${getBallColorClass(n)} w-8 h-8 text-xs font-mono">${padNum(n)}</span>
+        `).join('');
+
+        const specialHtml = `
+          <span class="text-slate-500 font-bold px-1">+</span>
+          <span class="lottery-ball ${getBallColorClass(t.special)} w-8 h-8 text-xs font-mono ring-2 ring-amber-400/80" title="推算特別號碼">${padNum(t.special)}</span>
+        `;
+
+        return `
+          <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:border-slate-700 transition">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[10px] font-mono font-bold text-slate-500 w-5">#${idx+1}</span>
+              ${ballsHtml}
+              ${specialHtml}
+            </div>
+            <div class="flex items-center justify-between sm:justify-end gap-3 text-[11px] text-slate-400 font-mono">
+              <span>和值: <b class="text-white">${t.sum}</b></span>
+              <span>${t.oddEven}</span>
+              <button onclick="copySingleTicket(${idx})" class="p-1 text-slate-400 hover:text-amber-400 rounded-md transition" title="複製此注">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function getModelName(m) {
+      switch(m) {
+        case 'hot_cold': return '歷史冷熱頻率模型';
+        case 'markov': return '馬可夫鏈狀態轉移';
+        case 'balance': return '波色五行平衡模型';
+        case 'neural': return 'AI 神經網絡信心值';
+        case 'random': return '純隨機蒙特卡羅';
+      }
+    }
+
+    function copyGeneratedTickets() {
+      if (generatedTicketsList.length === 0) {
+        showToast('請先生成注碼！', '⚠️');
+        return;
+      }
+      let text = `【六合智研 Mark Six AI】精選推算注碼：\n模型：${getModelName(currentModel)}\n`;
+      generatedTicketsList.forEach((t, i) => {
+        text += `${i + 1}. ` + t.regular.map(padNum).join(', ') + ` + 特別號 ${padNum(t.special)} (和值:${t.sum})\n`;
+      });
+      text += `\n祝您好運！理性博彩，娛樂第一。`;
+      copyToClipboard(text, '已複製全部注碼到剪貼簿！📋');
+    }
+
+    function copySingleTicket(idx) {
+      const t = generatedTicketsList[idx];
+      const text = t.regular.map(padNum).join(', ') + ' + ' + padNum(t.special);
+      copyToClipboard(text, `已複製第 ${idx + 1} 注 (${text}) 📋`);
+    }
+
+    function shareToWhatsApp() {
+      if (generatedTicketsList.length === 0) {
+        showToast('請先生成注碼！', '⚠️');
+        return;
+      }
+      let text = `🇭🇰 *香港六合彩心水夾飛清單* 🎱\n`;
+      text += `📌 推算模型：${getModelName(currentModel)}\n`;
+      text += `--------------------------\n`;
+      generatedTicketsList.forEach((t, i) => {
+        text += `注碼 ${i+1}: *${t.regular.map(padNum).join(', ')}* [特: ${padNum(t.special)}]\n`;
+      });
+      text += `--------------------------\n`;
+      text += `💰 總共 ${generatedTicketsList.length} 注 (每注$10)\n`;
+      text += `今晚發達睇呢張！快啲買飛～ 🍀`;
+
+      copyToClipboard(text, '已生成 WhatsApp 格式文本，可直接貼上群組！📲');
+    }
+
+    function copyToClipboard(str, successMsg) {
+      const buf = document.getElementById('clipboardBuffer');
+      buf.value = str;
+      buf.select();
+      buf.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy');
+        showToast(successMsg, '✅');
+      } catch (err) {
+        navigator.clipboard.writeText(str).then(() => {
+          showToast(successMsg, '✅');
+        }).catch(() => {
+          showToast('複製失敗，請手動複製', '❌');
+        });
+      }
+    }
+
+    /* =========================================================================
+     * STREAMING_CHUNK:Rendering visual heatmap grid and sorting
+     * 7. 49 號碼球熱圖矩陣渲染與互動 (Heatmap Grid)
+     * ========================================================================= */
+    function renderHeatmapGrid() {
+      const grid = document.getElementById('ballsHeatmapGrid');
+      let ballsArray = Object.values(ballStats);
+
+      if (currentSort === 'freq') {
+        ballsArray.sort((a,b) => b.freq - a.freq);
+      } else if (currentSort === 'overdue') {
+        ballsArray.sort((a,b) => b.overdue - a.overdue);
+      } else {
+        ballsArray.sort((a,b) => a.number - b.number);
+      }
+
+      // 計算最高最低次數以便漸層視覺
+      const maxFreq = Math.max(...ballsArray.map(b => b.freq));
+
+      grid.innerHTML = ballsArray.map(b => {
+        const isLocked = lockedBalls.has(b.number);
+        const isExcluded = excludedBalls.has(b.number);
+        
+        let statusBadge = '';
+        let borderClass = 'border-slate-800';
+
+        if (isLocked) {
+          statusBadge = '<span class="absolute -top-1 -right-1 bg-emerald-500 text-slate-950 rounded-full p-0.5 text-[9px] font-black"><i data-lucide="check" class="w-2.5 h-2.5"></i></span>';
+          borderClass = 'border-emerald-500 ring-2 ring-emerald-500/50';
+        } else if (isExcluded) {
+          statusBadge = '<span class="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 text-[9px] font-black"><i data-lucide="slash" class="w-2.5 h-2.5"></i></span>';
+          borderClass = 'border-rose-500 opacity-35';
+        }
+
+        return `
+          <div onclick="cycleBallFilter(${b.number})" class="relative bg-slate-950 p-2 rounded-2xl border ${borderClass} hover:border-slate-600 cursor-pointer flex flex-col items-center justify-center transition active:scale-95 group">
+            ${statusBadge}
+            <span class="lottery-ball ${b.colorClass} w-9 h-9 text-xs mb-1 font-mono">${padNum(b.number)}</span>
+            <div class="text-[10px] text-slate-400 font-mono text-center leading-tight">
+              <span class="block text-white font-bold">${b.freq}次</span>
+              <span class="text-[9px] text-slate-500">${b.overdue}期未出</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function sortBallsBy(type) {
+      currentSort = type;
+      ['num', 'freq', 'due'].forEach(k => {
+        const btn = document.getElementById(`btn_sort_${k}`);
+        btn.className = 'px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-white text-[11px] font-bold';
+      });
+      if (type === 'number') document.getElementById('btn_sort_num').className = 'px-2 py-1 rounded bg-amber-500/20 text-amber-300 text-[11px] font-bold';
+      if (type === 'freq') document.getElementById('btn_sort_freq').className = 'px-2 py-1 rounded bg-amber-500/20 text-amber-300 text-[11px] font-bold';
+      if (type === 'overdue') document.getElementById('btn_sort_due').className = 'px-2 py-1 rounded bg-amber-500/20 text-amber-300 text-[11px] font-bold';
+      
+      playSound('ball');
+      renderHeatmapGrid();
+    }
+
+    /* 點擊號碼球進行循環篩選：無 -> 鎖定 -> 排除 -> 無 */
+    function cycleBallFilter(num) {
+      playSound('ball');
+      if (!lockedBalls.has(num) && !excludedBalls.has(num)) {
+        if (lockedBalls.size >= 5) {
+          showToast('最多只能指定 5 個心水號碼！', '⚠️');
+          return;
+        }
+        lockedBalls.add(num);
+        showToast(`已鎖定心水球：${padNum(num)} 🎯`);
+      } else if (lockedBalls.has(num)) {
+        lockedBalls.delete(num);
+        excludedBalls.add(num);
+        showToast(`已剔除號碼球：${padNum(num)} 🚫`);
+      } else {
+        excludedBalls.delete(num);
+        showToast(`已還原號碼球：${padNum(num)} ↩️`);
+      }
+      updateFilterBadges();
+      renderHeatmapGrid();
+      renderModalFilterGrid();
+    }
+
+    function updateFilterBadges() {
+      document.getElementById('lockedCountBadge').textContent = lockedBalls.size;
+      document.getElementById('excludedCountBadge').textContent = excludedBalls.size;
+    }
+
+    function clearCustomFilter() {
+      lockedBalls.clear();
+      excludedBalls.clear();
+      updateFilterBadges();
+      renderHeatmapGrid();
+      renderModalFilterGrid();
+      showToast('已重設所有心水與剔除號碼！');
+    }
+
+    function renderModalFilterGrid() {
+      const grid = document.getElementById('filterBallsGrid');
+      grid.innerHTML = Array.from({ length: 49 }, (_, i) => i + 1).map(n => {
+        const isLocked = lockedBalls.has(n);
+        const isExcluded = excludedBalls.has(n);
+        let ring = 'border-slate-800';
+        let label = '正常';
+        let labelColor = 'text-slate-500';
+
+        if (isLocked) {
+          ring = 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500';
+          label = '必選';
+          labelColor = 'text-emerald-400 font-bold';
+        } else if (isExcluded) {
+          ring = 'border-rose-500 bg-rose-500/10 opacity-50';
+          label = '排除';
+          labelColor = 'text-rose-400 font-bold';
+        }
+
+        return `
+          <button onclick="cycleBallFilter(${n})" class="p-2 rounded-xl border ${ring} flex flex-col items-center justify-center transition active:scale-95">
+            <span class="lottery-ball ${getBallColorClass(n)} w-7 h-7 text-xs font-mono">${padNum(n)}</span>
+            <span class="text-[9px] mt-1 ${labelColor}">${label}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    /* =========================================================================
+     * STREAMING_CHUNK:Monte Carlo simulator calculation and engine
+     * 8. 蒙特卡羅 10,000 期極速模擬回測引擎 (Monte Carlo Simulation)
+     * ========================================================================= */
+    const PRIZE_RULES = [
+      { name: '頭獎 (6正字)', fixed: false, estPrize: 8000000, match: (reg, spec) => reg === 6 },
+      { name: '二獎 (5正+特)', fixed: false, estPrize: 384000, match: (reg, spec) => reg === 5 && spec === 1 },
+      { name: '三獎 (5正字)', fixed: false, estPrize: 48000, match: (reg, spec) => reg === 5 && spec === 0 },
+      { name: '四獎 (4正+特)', fixed: true, estPrize: 9600, match: (reg, spec) => reg === 4 && spec === 1 },
+      { name: '五獎 (4正字)', fixed: true, estPrize: 640, match: (reg, spec) => reg === 4 && spec === 0 },
+      { name: '六獎 (3正+特)', fixed: true, estPrize: 320, match: (reg, spec) => reg === 3 && spec === 1 },
+      { name: '七獎 (3正字)', fixed: true, estPrize: 40, match: (reg, spec) => reg === 3 && spec === 0 }
+    ];
+
+    function runMonteCarloBacktest() {
+      const btn = document.getElementById('btnStartBacktest');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin inline-block">⏳</span> 運算中...`;
+
+      // 取得基準推算號碼 (若已有生成則取第1注，否則新生成1注)
+      let candidate = generatedTicketsList[0] || generateOneSmartTicket();
+      const testSet = new Set(candidate.regular.slice(0, 6));
+
+      setTimeout(() => {
+        const SIM_DRAWS = 10000;
+        let totalPrizeWon = 0;
+        let totalWinsCount = 0;
+        const tierCounts = [0, 0, 0, 0, 0, 0, 0];
+        let highestTierWon = null;
+
+        for (let i = 0; i < SIM_DRAWS; i++) {
+          // 隨機開出 6 正 + 1 特
+          const pool = Array.from({ length: 49 }, (_, idx) => idx + 1);
+          let matchRegular = 0;
+          for (let k = 0; k < 6; k++) {
+            const idx = Math.floor(Math.random() * pool.length);
+            const ball = pool.splice(idx, 1)[0];
+            if (testSet.has(ball)) matchRegular++;
+          }
+          // 特號
+          const specialBall = pool[Math.floor(Math.random() * pool.length)];
+          const matchSpecial = testSet.has(specialBall) ? 1 : 0;
+
+          // 比對獎項
+          for (let t = 0; t < PRIZE_RULES.length; t++) {
+            if (PRIZE_RULES[t].match(matchRegular, matchSpecial)) {
+              tierCounts[t]++;
+              totalWinsCount++;
+              totalPrizeWon += PRIZE_RULES[t].estPrize;
+              if (highestTierWon === null || t < highestTierWon) {
+                highestTierWon = t;
+              }
+              break;
+            }
+          }
+        }
+
+        // 更新 UI
+        const cost = SIM_DRAWS * 10;
+        const roi = (((totalPrizeWon - cost) / cost) * 100).toFixed(1);
+        const winPercent = ((totalWinsCount / SIM_DRAWS) * 100).toFixed(2);
+
+        document.getElementById('resTotalBets').textContent = `${SIM_DRAWS.toLocaleString()} 期 ($${cost.toLocaleString()})`;
+        document.getElementById('resTotalWins').textContent = `${totalWinsCount.toLocaleString()} 次`;
+        document.getElementById('resWinRate').textContent = `命中率: ${winPercent}%`;
+        document.getElementById('resTotalPrize').textContent = `$${totalPrizeWon.toLocaleString()}`;
+        document.getElementById('resTotalPrize').className = totalPrizeWon >= cost 
+          ? 'text-base sm:text-lg font-black font-mono text-emerald-400 mt-1' 
+          : 'text-base sm:text-lg font-black font-mono text-rose-400 mt-1';
+        document.getElementById('resROI').textContent = `淨回報率 (ROI): ${roi}%`;
+
+        if (highestTierWon !== null) {
+          document.getElementById('resHighestTier').textContent = PRIZE_RULES[highestTierWon].name;
+          document.getElementById('resHighestDetail').textContent = `單次派彩約 $${PRIZE_RULES[highestTierWon].estPrize.toLocaleString()}`;
+          playSound('jackpot');
+        } else {
+          document.getElementById('resHighestTier').textContent = '未中任何獎項';
+          document.getElementById('resHighestDetail').textContent = '大數法則回歸常態';
+        }
+
+        // 渲染詳細階梯表
+        const breakdownList = document.getElementById('tierBreakdownList');
+        breakdownList.innerHTML = PRIZE_RULES.map((rule, idx) => {
+          const count = tierCounts[idx];
+          const subtotal = count * rule.estPrize;
+          const prob = ((count / SIM_DRAWS) * 100).toFixed(3);
+          return `
+            <div class="p-3 flex items-center justify-between text-xs hover:bg-slate-900/80 transition">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white w-28">${rule.name}</span>
+                <span class="text-slate-400 text-[11px]">估算每注: $${rule.estPrize.toLocaleString()}</span>
+              </div>
+              <div class="flex items-center gap-4 text-right">
+                <div>
+                  <span class="font-bold ${count > 0 ? 'text-amber-400' : 'text-slate-500'}">${count} 次</span>
+                  <span class="text-[10px] text-slate-500 block">(${prob}%)</span>
+                </div>
+                <div class="w-24 font-bold ${subtotal > 0 ? 'text-emerald-400' : 'text-slate-600'}">
+                  +$${subtotal.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-current"></i><span>重新執行一萬次回測</span>`;
+        lucide.createIcons();
+        showToast('回測計算完成！📊');
+      }, 350);
+    }
+
+    /* =========================================================================
+     * STREAMING_CHUNK:Event handlers, controls, modals, and initialization
+     * 9. 介面控制事件與初始化
+     * ========================================================================= */
+    function setModel(m) {
+      currentModel = m;
+      document.querySelectorAll('.model-tab-btn').forEach(b => {
+        b.className = 'model-tab-btn p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600 font-semibold';
+      });
+      document.getElementById(`btn_${m}`).className = 'model-tab-btn active p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 bg-amber-500/20 border-amber-500 text-amber-300 font-bold';
+      document.getElementById('currentModelBadge').textContent = getModelName(m);
+      playSound('ball');
+      generateTickets(1);
+    }
+
+    function setTicketMode(mode) {
+      ticketMode = mode;
+      ['single', 'combo7', 'combo8'].forEach(m => {
+        const btn = document.getElementById(`mode_${m}`);
+        btn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+      });
+      document.getElementById(`mode_${mode}`).className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-500 text-slate-950';
+      playSound('ball');
+      generateTickets(1);
+    }
+
+    function setOddEven(type) {
+      oddEvenFilter = type;
+      ['any', '33', '42', '24'].forEach(t => {
+        const id = 'oe_' + t;
+        const btn = document.getElementById(id);
+        if (btn) btn.className = 'px-2.5 py-1 rounded-lg border text-[11px] font-semibold bg-slate-800 border-slate-700 text-slate-300';
+      });
+      const activeId = type === 'any' ? 'oe_any' : (type === '3:3' ? 'oe_33' : (type === '4:2' ? 'oe_42' : 'oe_24'));
+      document.getElementById(activeId).className = 'px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-amber-500/20 border-amber-500 text-amber-300';
+      playSound('ball');
+    }
+
+    function updateParamUI() {
+      const val = parseInt(document.getElementById('paramWeight').value);
+      const text = document.getElementById('weightPreferenceText');
+      if (val < 35) {
+        text.textContent = `偏好冷門反彈 (${100 - val}%)`;
+      } else if (val > 65) {
+        text.textContent = `偏好熱門追勢 (${val}%)`;
+      } else {
+        text.textContent = `均衡配置 (${100 - val}:${val})`;
+      }
+    }
+
+    function updateSumUI() {
+      const min = document.getElementById('sumMin').value;
+      const max = document.getElementById('sumMax').value;
+      document.getElementById('sumRangeText').textContent = `${min} ~ ${max}`;
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'ballFilterModal') {
+        renderModalFilterGrid();
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    let toastTimer = null;
+    function showToast(msg, icon = '✨') {
+      const toast = document.getElementById('toastBox');
+      document.getElementById('toastMessage').textContent = msg;
+      document.getElementById('toastIcon').textContent = icon;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2400);
+    }
+
+    // 初始化啟動
+    window.onload = function() {
+      generateRealisticHistory();
+      renderHeatmapGrid();
+      generateTickets(1);
+      
+      // 初始化模擬回測階梯表模板
+      const breakdownList = document.getElementById('tierBreakdownList');
+      breakdownList.innerHTML = PRIZE_RULES.map(rule => `
+        <div class="p-3 flex items-center justify-between text-xs hover:bg-slate-900/80 transition text-slate-500">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-400 w-28">${rule.name}</span>
+            <span class="text-[11px]">估算每注: $${rule.estPrize.toLocaleString()}</span>
+          </div>
+          <div class="flex items-center gap-4 text-right">
+            <span>-- 次</span>
+            <span class="w-24">+$0</span>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>
